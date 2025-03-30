@@ -120,12 +120,12 @@ pair<int, int> InitialSolution::arrange_vehicle() {
                 depot = map_it.first;
                 dist = current_dist;
             }
-        }
-        count[depot] += 1;
+        } //find the closest depot of each collection
+        count[depot] += 1; //count<depot number, number of collections whose closest depot is it>
     }
     vector<pair<int,int> > temp(this->m_dataLoader.depot_data.size());
     int index = 0;
-    for(auto & it: count){
+    for(auto & it: count){ //it is pair<depot, number of closest collections>
         temp[index] = it;
         index += 1;
     }
@@ -167,9 +167,9 @@ unordered_map<int, vector<int> > InitialSolution::init_solution() {
                 int site_index = -1;
                 int flag = -2;
                 if(v_it->second.getCurrentTimeCost() >= total_time_cost*time_rate || this->m_dataLoader.no_served_c.empty()){
-                    flag = 2;
+                    flag = 2; // no enough time
                 }else if(v_it->second.getCurrentCapacity() >= int(max_capacity*capacity_rate)){
-                    flag = 0;
+                    flag = 0; //no enough capacity
                 }else{
                     pair<int, int> result_pair = this->collection_selection(current_site, vehicle_depot_pair.first);
                     site_index = result_pair.first;

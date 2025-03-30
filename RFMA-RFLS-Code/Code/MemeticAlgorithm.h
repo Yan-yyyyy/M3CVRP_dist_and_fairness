@@ -6,6 +6,9 @@
 #define UWCP_MEMETICALGORITHM_H
 #include "LocalSearch.h"
 #include <random>
+#include <algorithm>
+#include <cmath>
+#include <numeric>
 
 class MemeticAlgorithm {
 private:
@@ -41,6 +44,11 @@ public:
             unordered_map<int, vector<int> > &best_solution, int capacity, const string &strategy);
     pair<int, double> fitness_function(const unordered_map<int, vector<int> > &solution, float time_threshold,
                                        int best_distance, int capacity, const string &strategy);
+    void fast_non_dominated_sort(const unordered_map<int, unordered_map<int, vector<int> > > &population,
+                            float time_threshold, int capacity, const string &strategy);
+    pair<int, double> multiobjective_fitness_function(const unordered_map<int, vector<int> > &solution, int capacity, const string &strategy);
+    vector<double> minMaxNormalization(const vector<double>& data);
+    double calculateStandardDeviation(const vector<double>& data);
     double calculate_diversity(const unordered_map<int, unordered_map<int, vector<int> > > & population);
     static void show_vector(const vector<int> & goal_vector);
     static void show_vector(const vector<int> & goal_vector, fstream & f1);

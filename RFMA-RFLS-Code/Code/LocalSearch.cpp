@@ -40,6 +40,74 @@ LocalSearch::calculate_single_route_dist_and_time_cost(const vector<int> &comple
     return make_pair(total_dist, total_time_cost);
 }
 
+pair<int, pair<float,int>>
+LocalSearch::calculate_single_route_dist_and_time_cost_and_capacity(const vector<int> &complete_route, float speed) {
+    int total_dist = 0;
+    float total_time_cost = 0;
+    int total_capacity = 0;
+    for(int i=0; i<complete_route.size()-1; i++){
+        total_dist += dist_matrix[complete_route[i]][complete_route[i+1]];
+        auto it = this->m_dataLoader.collection_site_data.find(complete_route[i]);
+        if(it != this->m_dataLoader.collection_site_data.end()){
+            total_time_cost += float(it->second.getServerCost());
+            total_capacity += it->second.getPointCapacity();
+        }
+    }
+    total_time_cost += float(total_dist)/speed;
+
+    return make_pair(total_dist, make_pair(total_time_cost,total_capacity));
+}
+
+pair<int, double> LocalSearch::multiobjective_fitness_function(const unordered_map<int, vector<int> > &solution, int capacity, const string &strategy) {
+    int total_dist = 0;
+    vector<double> time_list;
+    vector<double> capacity_list;
+    for(auto & it: solution){
+        vector<int> complete_solution = this->insert_for_single_route(it.second, capacity, strategy);
+        pair<int, pair<float,int>> result_pair = this->calculate_single_route_dist_and_time_cost_and_capacity(complete_solution, 12.5);//distance and (time and capacity)
+        total_dist += result_pair.first;
+        time_list.push_back((double)result_pair.second.first);
+        capacity_list.push_back((double)result_pair.second.second);
+    }
+    double time_fairness=this->calculateStandardDeviation(time_list);
+    double capacity_fairness=this->calculateStandardDeviation(capacity_list);
+    return make_pair(total_dist,time_fairness+capacity_fairness);
+}
+
+// 极差标准化
+vector<double> LocalSearch::minMaxNormalization(const vector<double>& data) {
+    if (data.empty()) {
+        return data;
+    }
+    double minVal = *std::min_element(data.begin(), data.end());
+    double maxVal = *std::max_element(data.begin(), data.end());
+    if (maxVal == minVal) {
+        vector<double> normalizedData(data.size(), 0.0);
+        return normalizedData;
+    }
+    vector<double> normalizedData;
+    for (double value : data) {
+        double normalizedValue = (value - minVal) / (maxVal - minVal);
+        normalizedData.push_back(normalizedValue);
+    }
+
+    return normalizedData;
+}
+
+double LocalSearch::calculateStandardDeviation(const vector<double>& data) {
+    vector<double> norm_data = this->minMaxNormalization(data);
+    if (norm_data.empty()) {
+        return 0.0;
+    }
+    double mean = std::accumulate(norm_data.begin(), norm_data.end(), 0.0) / norm_data.size();
+    double variance = 0.0;
+    for (double value : norm_data) {
+        variance += (value - mean) * (value - mean);
+    }
+    variance /= norm_data.size();
+    return std::sqrt(variance);
+}
+
 int LocalSearch::get_closest_disposal_facility(int start, int end) {
     int min_dist = INT32_MAX;
     int closet_d = -1;
@@ -617,7 +685,6 @@ void LocalSearch::optimize_solution(unordered_map<int, vector<int> > &solution, 
                 if(current_dist < best_dist){
                     best_dist = current_dist;
                     best_solution = solution;
-
                 }
                 
             }else{
@@ -733,20 +800,25 @@ void LocalSearch::optimizee_solution_ma(unordered_map<int, vector<int> > &soluti
     while(time_index<=iteration){
         int judge_break = 0;
         int best_distance = INT32_MAX;
-
         while(true){
-            this->mutation_with_novel_operator(solution, 100, 10, 72000, 1, strategy);
-            this->mutation_with_novel_operator(solution, 100, 100, 72000, 2, strategy);
+            // clock_t st = clock();
+            // cout << st << endl;
+            this->mutation_with_novel_operator(solution, 40, 10, 72000, 1, strategy);
+            // clock_t ct = clock();
+            // cout << "time_cost = " << ct-st<< endl;
+            this->mutation_with_novel_operator(solution, 40, 20, 72000, 2, strategy);
+            // cout << "tc = " << clock()-ct << endl;
             vector<int> random_method = {1, 2, 3};
             shuffle(random_method.begin(), random_method.end(), std::mt19937(std::random_device()()));
             for(auto & it: random_method){
-                this->mutation_with_classic_operator(solution, 100, 72000, strategy, it);
+                this->mutation_with_classic_operator(solution, 40, 72000, strategy, it);
             }
             unordered_map<int, vector<int> > complete_solution = this->insert_for_all_route(solution, 72000, strategy);
             int current_dist = this->get_total_distance(complete_solution);
-
+            
             if(current_dist < best_distance){
                 if(current_dist<=best_distance-dist_threshold){
+                    // cout << current_dist << " cur vs best dist " << best_distance << endl;
                     judge_break = 0;
                 }else{
                     judge_break += 1;

@@ -38,13 +38,12 @@ void get_all_diversity_time(DataLoader & dataLoader, unordered_map<pair<int, int
 
 
 int main() {
-    const string v_file_path = R"(/home/yezy/cplusplus_code/UWCP/data/VehicleData_74.json)";
-    const string c_file_path = R"(/home/yezy/cplusplus_code/UWCP/data/ExtractPoints.json)";
-    // const string c_file_path = R"(/home/yezy/cplusplus_code/UWCP/data/1_1_rebuttal_dataset/70sites.json)";
-    const string p_file_path = R"(/home/yezy/cplusplus_code/UWCP/data/ParkingLots.json)";
-    const string d_file_path = R"(/home/yezy/cplusplus_code/UWCP/data/Dropping.json)";
+    const string v_file_path = R"(./data/VehicleData_100.json)";
+    const string c_file_path = R"(./data/WasteCollectionSites.json)";
+    const string p_file_path = R"(./data/Depots.json)";
+    const string d_file_path = R"(./data/DisposalFacilities.json)";
     // 1st_rebuttal_dataset
-    const string dist_file_path = R"(/home/yezy/cplusplus_code/UWCP/data/FinalResult.csv)";
+    const string dist_file_path = R"(./data/FinalResult_V2.csv)";
     // const string dist_file_path = R"(/home/yezy/cplusplus_code/UWCP/data/1_1_rebuttal_dataset/70sites_distance.csv)";
     DataLoader dataLoader = DataLoader(
             v_file_path, c_file_path, p_file_path, d_file_path, dist_file_path
@@ -74,7 +73,7 @@ int main() {
      // Low Diversity
      // vector<pair<int, int> > parameter_vector = {{86, 94}, {81, 97}, {95, 90}, {87, 95}, {87, 94}, {85, 92}, {82, 98}, {85, 94}, {87, 90}, {98, 98}, {92, 93}, {89, 92}, {85, 100}, {81, 93}, {82, 93}, {94, 94}, {88, 100}, {90, 91}, {89, 97}, {100, 98}, {80, 100}, {87, 93}, {92, 95}, {83, 90}, {87, 96}, {94, 92}, {86, 97}, {93, 96}, {89, 93}, {84, 99}};
     get_population_according_parameter(dataLoader, population, parameter_vector);
-
+    cout << population.size() << endl;
 
     LocalSearch localSearch = LocalSearch(dataLoader);
     MemeticAlgorithm memeticAlgorithm = MemeticAlgorithm(localSearch, population.size(), (int)population.size()*6, 0.2, population);
@@ -82,12 +81,12 @@ int main() {
 
     memeticAlgorithm.delete_double_d_for_population();
     unordered_map<int, vector<int> > best_solution;
-    string strategy = "Backspacing";
+    string strategy = "Greedy";
     int best_dist = memeticAlgorithm.get_best_solution_among_population(memeticAlgorithm.population_dict, best_solution, 72000, strategy);
     cout << best_dist << endl;
 
     memeticAlgorithm.delete_double_d_for_population();
-    memeticAlgorithm.memetic_algorithm(72000, 8*3600, 100, "Backspacing");
+    memeticAlgorithm.memetic_algorithm(72000, 8*3600, 100, "Greedy");
 
     return 0;
 }

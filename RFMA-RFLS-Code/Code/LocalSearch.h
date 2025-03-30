@@ -22,6 +22,10 @@ public:
     static int get_random_number(unsigned int begin, unsigned int end);
     static int calculate_single_route_distance(const vector<int> & complete_route);
     pair<int, float> calculate_single_route_dist_and_time_cost(const vector<int> & complete_route, float speed);
+    pair<int, pair<float,int>> calculate_single_route_dist_and_time_cost_and_capacity(const vector<int> &complete_route, float speed);
+    pair<int, double> multiobjective_fitness_function(const unordered_map<int, vector<int> > &solution, int capacity, const string &strategy);
+    vector<double> minMaxNormalization(const vector<double>& data);
+    double calculateStandardDeviation(const vector<double>& data);
     int get_closest_disposal_facility(int start, int end);
     pair<int, int> get_closest_park(int start, int end);
     vector<int> insert_disposal_facility_with_greedy(const vector<int> & route, int car_capacity);

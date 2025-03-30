@@ -3,9 +3,9 @@ import json
 
 if __name__=='__main__':
     print("Hello World")
-    for j in range(10, 30):
+    for j in range(99, 101):
         carfilepath = './VehicleData_'+str(j)+'.json'
-        depotfilepath = './ParkingLots.json'
+        depotfilepath = './Depots.json'
         NUM = j
 
         tmp = set()
