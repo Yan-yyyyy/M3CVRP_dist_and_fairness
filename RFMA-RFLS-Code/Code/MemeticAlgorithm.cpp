@@ -289,7 +289,9 @@ void MemeticAlgorithm::stochastic_ranking(const unordered_map<int, unordered_map
     for(auto & solution_it: population){
         population_key[index] = solution_it.first;
         index += 1;
-        pair<int, double> fitness_result = this->fitness_function(solution_it.second, time_threshold, best_distance, capacity, strategy);
+        // pair<int, double> fitness_result = this->multiobjective_fitness_function(solution_it.second, time_threshold, best_distance, capacity, strategy);
+        // score_map.emplace(pair<int, pair<int, double> >(solution_it.first, fitness_result));
+        pair<int, double> fitness_result = this->multiobjective_fitness_function(solution_it.second, capacity, strategy);
         score_map.emplace(pair<int, pair<int, double> >(solution_it.first, fitness_result));
     }
 
@@ -301,14 +303,14 @@ void MemeticAlgorithm::stochastic_ranking(const unordered_map<int, unordered_map
             int end = population_key[j+1];
             auto start_it = score_map.find(start);
             auto end_it = score_map.find(end);
-            if((start_it->second.second==0 && end_it->second.second==0) || u < pf){
+            if(u < pf){
                 if(start_it->second.first > end_it->second.first){
                     population_key[j] = end;
                     population_key[j+1] = start;
                     swap_time += 1;
                 }
             }else{
-                if(start_it->second.second > end_it->second.second){
+                if(start_it->second.second < end_it->second.second){
                     population_key[j] = end;
                     population_key[j+1] = start;
                     swap_time += 1;
@@ -347,63 +349,81 @@ pair<int, double> MemeticAlgorithm::fitness_function(const unordered_map<int, ve
 
 void MemeticAlgorithm::fast_non_dominated_sort(const unordered_map<int, unordered_map<int, vector<int> > > &population,
                                           float time_threshold, int capacity, const string &strategy) {
-    vector<int> population_key(population.size());
+    // vector<int> population_key(population.size());
+    // cout << "population size: " << population.size() << endl;
     unordered_map<int, pair<int, double> > score_map;
-    const double pf = 0.45;
-    int index = 0;
-    for(auto & solution_it: population){
-        population_key[index] = solution_it.first;
-        index += 1;
-        pair<int, double> fitness_result = this->multiobjective_fitness_function(solution_it.second, capacity, strategy);
-        score_map.emplace(pair<int, pair<int, double> >(solution_it.first, fitness_result));
-    }
+    // const double pf = 0.45;
+    // int index = 0;
+    // for(auto & solution_it: population){
+    //     // population_key[index] = solution_it.first;
+    //     // index += 1;
+    //     pair<int, double> fitness_result = this->multiobjective_fitness_function(solution_it.second, capacity, strategy);
+    //     score_map.emplace(pair<int, pair<int, double> >(solution_it.first, fitness_result));
+    // }
     unordered_map<int, int> rank;  // 存储每个个体的非支配层级
     unordered_map<int, vector<int>> dominated_set;  // 存储每个个体支配的集合
     unordered_map<int, int> domination_count;  // 存储每个个体被支配的次数
     for (const auto &solution : population) {
         int solution_id = solution.first;
-        dominated_set[solution_id] = {};
+        vector<int> v_s;
+        dominated_set[solution_id] = v_s;
         domination_count[solution_id] = 0;
+        pair<int, double> fitness_result = this->multiobjective_fitness_function(solution.second, capacity, strategy);
+        score_map.emplace(pair<int, pair<int, double> >(solution.first, fitness_result));
     }
 
     // 计算支配关系
     for (const auto &solution1 : population) {
         int solution1_id = solution1.first;
-        auto solu1_fitness = score_map.find(solution1_id);
+        auto solu1_fitness = score_map.find(solution1_id)->second;
+        // cout << "solution1_id " << solution1_id <<endl; 
 
         for (const auto &solution2 : population) {
             int solution2_id = solution2.first;
+            // cout << "solution2_id " << solution2_id << ", ";
 
-            if (solution1_id == solution2_id) continue;
+            if (solution1_id == solution2_id){continue;}
 
-            auto solu2_fitness = score_map.find(solution2_id);
+            auto solu2_fitness = score_map.find(solution2_id)->second;
             bool dominates = true;
             bool is_dominated = true;
-            if (solu1_fitness->second.first>solu2_fitness->second.first||solu1_fitness->second.second>solu2_fitness->second.second){
+            if (solu1_fitness.first > solu2_fitness.first || solu1_fitness.second > solu2_fitness.second){
                 dominates = false;
             }
-            if (solu1_fitness->second.first<solu2_fitness->second.first||solu1_fitness->second.second<solu2_fitness->second.second){
+            if (solu1_fitness.first < solu2_fitness.first || solu1_fitness.second < solu2_fitness.second){
+                is_dominated = false;
+            }
+            if (solu1_fitness.first == solu2_fitness.first && solu1_fitness.second == solu2_fitness.second){
+                dominates = false;
                 is_dominated = false;
             }
 
-            if (dominates)
+            if (dominates){
+                // cout << solution1_id << " dominates " << solution2_id <<" | ";
                 dominated_set[solution1_id].push_back(solution2_id);
-            if (is_dominated)
+            }
+            if (is_dominated){
+                // cout << solution1_id << " Dominated by " << solution2_id <<" | ";
                 domination_count[solution1_id]++;
+            }
         }
-
-        if (domination_count[solution1_id] == 0)
+        // cout << "solution " << solution1_id << " dominates " << dominated_set[solution1_id].size() << endl;
+        // cout << "solution " << solution1_id << " dominated " << domination_count[solution1_id] << endl;
+        if (domination_count[solution1_id] == 0){
             rank[solution1_id] = 1;
+        }
     }
     
-    vector<vector<int>> fronts = {{}};
-    for (const auto &solution : population) {
-        if (rank[solution.first] == 1)
-            fronts[0].push_back(solution.first);
+    vector<vector<int>> fronts;
+    vector<int> f;
+    for (const auto &solution_r : rank) {
+        f.push_back(solution_r.first);
     }
+    fronts.push_back(f);
 
     size_t i = 0;
     while (!fronts[i].empty()) {
+        // cout << "fronts[" << i << "] size " << fronts[i].size() << endl;
         vector<int> next_front;
         for (int p : fronts[i]) {
             for (int q : dominated_set[p]) {
@@ -421,12 +441,13 @@ void MemeticAlgorithm::fast_non_dominated_sort(const unordered_map<int, unordere
     unordered_map<int, vector<int>> fronts1;
     for (const auto &solu : rank) {
         int solu_id = solu.first;
-        fronts1[rank[solu_id]].push_back(solu_id);
+        fronts1[solu.second].push_back(solu_id);
     }
     size_t front_index = 1;
     vector<unordered_map<int, double>> crowding_distance_list;
     //逐层计算拥挤度
     while (!fronts1[front_index].empty()) {
+        // cout << "front_index " << front_index << ", front size " << fronts1[front_index].size() << endl;
         const vector<int> front = fronts1[front_index];
         unordered_map<int, double> crowding_distance;
         for (int s_id : front)
@@ -434,56 +455,62 @@ void MemeticAlgorithm::fast_non_dominated_sort(const unordered_map<int, unordere
 
         vector<int> sorted_front1 = front;
         sort(sorted_front1.begin(),sorted_front1.end(),[&](int a, int b){
-            return score_map.find(a)->second.first<score_map.find(b)->second.first;
+            return score_map.find(a)->second.first < score_map.find(b)->second.first;
         });
 
         crowding_distance[sorted_front1[0]] = crowding_distance[sorted_front1.back()] = numeric_limits<double>::infinity();
         
-        for (size_t i = 1; i < sorted_front1.size() - 1; i++) {
-            crowding_distance[sorted_front1[i]] +=
-                (double)(score_map.find(sorted_front1[i + 1])->second.first - score_map.find(sorted_front1[i - 1])->second.first) /
+        for (size_t s = 1; s < sorted_front1.size() - 1; s++) {
+            crowding_distance[sorted_front1[s]] +=
+                (double)(score_map.find(sorted_front1[s + 1])->second.first - score_map.find(sorted_front1[s - 1])->second.first) /
                 (double)(score_map.find(sorted_front1.back())->second.first - score_map.find(sorted_front1[0])->second.first);
         }
 
         vector<int> sorted_front2 = front;
         sort(sorted_front2.begin(),sorted_front2.end(),[&](int a, int b){
-            return score_map.find(a)->second.second<score_map.find(b)->second.second;
+            return score_map.find(a)->second.second < score_map.find(b)->second.second;
         });
 
         crowding_distance[sorted_front2[0]] = crowding_distance[sorted_front2.back()] = numeric_limits<double>::infinity();
         
-        for (size_t i = 1; i < sorted_front2.size() - 1; i++) {
-            crowding_distance[sorted_front2[i]] +=
-                (score_map.find(sorted_front2[i + 1])->second.first - score_map.find(sorted_front2[i - 1])->second.first) /
-                (score_map.find(sorted_front2.back())->second.first - score_map.find(sorted_front2[0])->second.first);
+        for (size_t s = 1; s < sorted_front2.size() - 1; s++) {
+            crowding_distance[sorted_front2[s]] +=
+                (score_map.find(sorted_front2[s + 1])->second.second - score_map.find(sorted_front2[s - 1])->second.second) /
+                (score_map.find(sorted_front2.back())->second.second - score_map.find(sorted_front2[0])->second.second);
         }
         crowding_distance_list.push_back(crowding_distance);
         front_index += 1;
     }
 
     this->population_dict.clear();
-    index = 0;
+    int index = 0;
     //按照优先低层级，同层级优先拥挤度大进行最后排序
+    // cout << "final" << endl;
     for (size_t i = 1; i < front_index; i++){
+        // cout << i << ", ";
         vector<pair<int, double>> sorted_front;
-        for (int solu_id : fronts1[i])
-            sorted_front.push_back({solu_id,crowding_distance_list[i-1][solu_id]});
-        
+        for (int solu_id : fronts1[i]){
+            sorted_front.push_back(make_pair(solu_id,crowding_distance_list[i-1][solu_id]));
+        }
         sort(sorted_front.begin(), sorted_front.end(),[&](const pair<int, double> &a, const pair<int, double> &b){
             return a.second>b.second;
         });
+        int tem_index = index;
         if (index + sorted_front.size() <= this->p_size){
-            for (size_t i = 0; i < sorted_front.size(); i++){
-                this->population_dict.emplace(pair<int, unordered_map<int, vector<int> > >(index, population.find(sorted_front[i])->second));
+            for (int j = 0; j < sorted_front.size(); j++){
+                this->population_dict.emplace(pair<int, unordered_map<int, vector<int> > >(index, population.find(sorted_front[j].first)->second));
                 index += 1;
             }
         }else{
-            for (size_t i = 0; i < this->p_size-index; i++){
-                this->population_dict.emplace(pair<int, unordered_map<int, vector<int> > >(index, population.find(sorted_front[i])->second));
+            // cout << "index " << index << " sorted front size " << sorted_front.size() << " p_size - tem_index " << (this->p_size-tem_index) << endl;
+            for (int j_1 = 0; j_1 < (this->p_size-tem_index); j_1 ++){
+                this->population_dict.emplace(pair<int, unordered_map<int, vector<int> > >(index, population.find(sorted_front[j_1].first)->second));
                 index += 1;
             }
+            break;
         }
     }
+    // cout << "final index " << index << endl;
 }
 
 pair<int, double> MemeticAlgorithm::multiobjective_fitness_function(const unordered_map<int, vector<int> > &solution, int capacity, const string &strategy) {
@@ -500,6 +527,22 @@ pair<int, double> MemeticAlgorithm::multiobjective_fitness_function(const unorde
     double time_fairness=this->calculateStandardDeviation(time_list);
     double capacity_fairness=this->calculateStandardDeviation(capacity_list);
     return make_pair(total_dist,time_fairness+capacity_fairness);
+}
+
+pair<int, pair<double,double>> MemeticAlgorithm::multiobjective_fitness_function_depart(const unordered_map<int, vector<int> > &solution, int capacity, const string &strategy) {
+    int total_dist = 0;
+    vector<double> time_list;
+    vector<double> capacity_list;
+    for(auto & it: solution){
+        vector<int> complete_solution = this->local_search.insert_for_single_route(it.second, capacity, strategy);
+        pair<int, pair<float,int>> result_pair = this->local_search.calculate_single_route_dist_and_time_cost_and_capacity(complete_solution, 12.5);//distance and (time and capacity)
+        total_dist += result_pair.first;
+        time_list.push_back((double)result_pair.second.first);
+        capacity_list.push_back((double)result_pair.second.second);
+    }
+    double time_fairness=this->calculateStandardDeviation(time_list);
+    double capacity_fairness=this->calculateStandardDeviation(capacity_list);
+    return make_pair(total_dist,make_pair(time_fairness,capacity_fairness));
 }
 
 // 极差标准化
@@ -546,9 +589,9 @@ void MemeticAlgorithm::memetic_algorithm(int capacity, float time_threshold, int
 
     fstream f1;
     f1.open(file_name, ios::out);
-    double entropy = this->calculate_diversity(this->population_dict);
-    f1 << "size = 30 entropy maximum" << endl;
-    f1 << "entropy = " << entropy << endl;
+    // double entropy = this->calculate_diversity(this->population_dict);
+    // f1 << "size = 30 entropy maximum" << endl;
+    // f1 << "entropy = " << entropy << endl;
     this->delete_double_d_for_population();
 
     // fstream ff1;
@@ -556,7 +599,7 @@ void MemeticAlgorithm::memetic_algorithm(int capacity, float time_threshold, int
 
     unordered_map<int, vector<int> > best_solution;
     int best_distance = this->get_best_solution_among_population(this->population_dict, best_solution, capacity, strategy);
-    f1 << "initial best_dist = " << best_distance << endl;
+    // f1 << "initial best_dist = " << best_distance << endl;
 
     // time_t start_time = time(nullptr);
 
@@ -564,49 +607,52 @@ void MemeticAlgorithm::memetic_algorithm(int capacity, float time_threshold, int
     start_time = clock();
     int time_index = 1;
     int time_interval = 20*60;
+    int iteration = 1;
+    double weight_dist = 0.9;
     while(time_index<=runtime){
-        cout << "time_index" << time_index << endl;
+        // cout << "time_index" << time_index << endl;
         unordered_map<int, unordered_map<int, vector<int> > > population_map = this->population_dict;
-        for(int i=0; i<this->op_size; i++){
-            // cout << "i = " << i << endl;
-            // cout << "population size: " << population_map.size() << endl;
+        for(int i=0; i< this->op_size; i++){
             unordered_map<int, vector<int> > individual = this->crossover(capacity, strategy);
             unordered_map<int, vector<int> > individual_copy = individual;
             double r = this->generate_random_number();
             // f1 << "probability = " << r << endl;
             if(r < this->pls){
-                this->local_search.optimizee_solution_ma(individual, 10, strategy);
+                this->local_search.optimizee_solution_ma(individual, 3, strategy, weight_dist);
                 // cout << "WEN" << endl;
-                unordered_map<int, vector<int> > complete_solution = this->local_search.insert_for_all_route(individual, capacity, strategy);
+                // unordered_map<int, vector<int> > complete_solution = this->local_search.insert_for_all_route(individual, capacity, strategy);
                 
-                int new_solution_dist = LocalSearch::get_total_distance(complete_solution);
+                // int new_solution_dist = LocalSearch::get_total_distance(complete_solution);
 
                 // cout << "Xing" << endl;
-                if(new_solution_dist < best_distance){
-                    best_distance = new_solution_dist;
-                    best_solution = individual;
-                    f1 << "best_dist = " << best_distance << endl;
-                }
+                // if(new_solution_dist < best_distance){
+                //     best_distance = new_solution_dist;
+                //     best_solution = individual;
+                //     f1 << "best_dist = " << best_distance << endl;
+                // }
 
                 population_map.emplace(pair<int, unordered_map<int, vector<int> > >(population_map.size(), individual));
 
                 finish_time = clock();
-                if(((finish_time-start_time)/CLOCKS_PER_SEC) >= time_index*time_interval){
+                time_index = ((finish_time-start_time)/CLOCKS_PER_SEC)/time_interval;
+                // if(((finish_time-start_time)/CLOCKS_PER_SEC) >= time_index*time_interval){
                     // cout << (finish_time-start_time)/CLOCKS_PER_SEC << "seconds" <<endl;
                     // f1 << "after " << time_index << " * "<< time_interval/60 <<" minutes, best_distance = " << best_distance << endl;
                     // best_distance_vector.emplace_back(best_distance);
-                    double avg_dist = 0;
-                    double avg_fair = 0;
-                    for(auto & solution_it: this->population_dict){
-                        pair<int, double> fitness_result = this->multiobjective_fitness_function(solution_it.second, capacity, strategy);
-                        avg_dist += (double)fitness_result.first;
-                        avg_fair += fitness_result.second;
-                    }
-                    avg_dist/=this->population_dict.size();
-                    avg_fair/=this->population_dict.size();
-                    f1 << "after " << time_index << " * "<< time_interval/60 <<" minutes, the average distance and fairness of the population :  " << avg_dist << ", " << avg_fair << endl;
-                    time_index += 1;
-                }
+                    // double avg_dist = 0;
+                    // double avg_fair = 0;
+                    // for(int i = 0; i < this->population_dict.size(); i++){
+                    //     pair<int, double> fitness_result = this->multiobjective_fitness_function(this->population_dict[i], capacity, strategy);
+                    //     f1 << i << ", " << fitness_result.first << ", " << fitness_result.second << endl;
+                    //     avg_dist += (double)fitness_result.first;
+                    //     avg_fair += fitness_result.second;
+                    // }
+                    // avg_dist/=this->population_dict.size();
+                    // avg_fair/=this->population_dict.size();
+                    
+                    // f1 << "after " << time_index << " * "<< time_interval/60 <<" minutes, the average distance and fairness of population :  " << avg_dist << ", " << avg_fair << endl;
+                //     time_index ;
+                // }
                 if(time_index > runtime){
                     break;
                 }
@@ -618,54 +664,74 @@ void MemeticAlgorithm::memetic_algorithm(int capacity, float time_threshold, int
             }else{
                 //this->local_search.optimizee_solution_ma(individual, 5, strategy);
                 unordered_map<int, vector<int> > complete_solution = this->local_search.insert_for_all_route(individual, capacity, strategy);
-                int new_solution_dist = LocalSearch::get_total_distance(complete_solution);
+                // int new_solution_dist = LocalSearch::get_total_distance(complete_solution);
 
-                if(new_solution_dist < best_distance){
-                    best_distance = new_solution_dist;
-                    best_solution = individual;
-                    f1 << "best_dist = " << best_distance << endl;
-                }
+                // if(new_solution_dist < best_distance){
+                //     best_distance = new_solution_dist;
+                //     best_solution = individual;
+                //     f1 << "best_dist = " << best_distance << endl;
+                // }
 
                 population_map.emplace(pair<int, unordered_map<int, vector<int> > >(population_map.size(), individual));
 
                 finish_time = clock();
-                if(((finish_time-start_time)/CLOCKS_PER_SEC) >= time_index*time_interval){
+                time_index = ((finish_time-start_time)/CLOCKS_PER_SEC)/time_interval;
+                // if(((finish_time-start_time)/CLOCKS_PER_SEC) >= time_index*time_interval){
                     // f1 << "after " << time_index << " * "<<time_interval/60 <<" minutes, best_distance = " << best_distance << endl;
                     // time_index += 1;
                     // best_distance_vector.emplace_back(best_distance);
-                    double avg_dist = 0;
-                    double avg_fair = 0;
-                    for(auto & solution_it: this->population_dict){
-                        pair<int, double> fitness_result = this->multiobjective_fitness_function(solution_it.second, capacity, strategy);
-                        avg_dist += (double)fitness_result.first;
-                        avg_fair += fitness_result.second;
-                    }
-                    avg_dist/=this->population_dict.size();
-                    avg_fair/=this->population_dict.size();
-                    f1 << "after " << time_index << " * "<< time_interval/60 <<" minutes, the average distance and fairness of the population :  " << avg_dist << ", " << avg_fair << endl;
-                    time_index += 1;
-                }
+                    // double avg_dist = 0;
+                    // double avg_fair = 0;
+                    // for(int i = 0; i < this->population_dict.size(); i++){
+                    //     pair<int, pair<double,double>> fitness_result = this->multiobjective_fitness_function(this->population_dict[i], capacity, strategy);
+                    //     f1 << i << ", " << fitness_result.first << ", " << fitness_result.second.first << ", " << fitness_result.second.second << endl;
+                    //     avg_dist += (double)fitness_result.first;
+                    //     avg_fair += fitness_result.second;
+                    // }
+                    // avg_dist/=this->population_dict.size();
+                    // avg_fair/=this->population_dict.size();
+                    
+                    // f1 << "after " << time_index << " * "<< time_interval/60 <<" minutes, the average distance and fairness of the population :  " << avg_dist << ", " << avg_fair << endl;
+                //     time_index += 1;
+                // }
                 if(time_index > runtime){
                     break;
                 }
             }
         }
-
         // this->stochastic_ranking(population_map, time_threshold, capacity, strategy, best_distance);
         this->fast_non_dominated_sort(population_map, time_threshold, capacity, strategy);
+        double avg_dist = 0;
+        double avg_fair_t1 = 0;
+        double avg_fair_c = 0;
+        f1 << "iteration " << iteration << endl;
+        for(int i = 0; i < this->population_dict.size(); i++){
+            pair<int,pair<double,double>> fitness_result = this->multiobjective_fitness_function_depart(this->population_dict[i], capacity, strategy);
+            f1 << i << ", " << fitness_result.first << ", " << fitness_result.second.first << ", " << fitness_result.second.second << ", " << (fitness_result.second.first+fitness_result.second.second) << endl;
+            avg_dist += (double)fitness_result.first;
+            avg_fair_t1 += fitness_result.second.first;
+            avg_fair_c += fitness_result.second.second;
+        }
+        avg_dist/=this->population_dict.size();
+        avg_fair_t1/=this->population_dict.size();
+        avg_fair_c/=this->population_dict.size();
+        f1 << "iteration " << iteration << ", avg of distance, fair of time and capacity: " << avg_dist << ", " << avg_fair_t1 << ", " << avg_fair_c << ", weight " << weight_dist <<endl;
+        weight_dist = 1/(1 + exp(-(avg_dist-6000000.0)/800000.0));
+        iteration++;
     }
-    f1 << "End while, the final population as below:" << endl;
-    double avg_dist = 0;
-    double avg_fair = 0;
-    for(int i = 0; i < this->population_dict.size(); i++){
-        pair<int, double> fitness_result = this->multiobjective_fitness_function(population_dict[i].second, capacity, strategy);
-        f1 << i << "-th solution, dist " << fitness_result.first << ", fairness " << fitness_result.second << endl;
-        avg_dist += (double)fitness_result.first;
-        avg_fair += fitness_result.second;
-    }
-    avg_dist/=this->population_dict.size();
-    avg_fair/=this->population_dict.size();
-    f1 << "Finally , the average distance and fairness of the population :  " << avg_dist << ", " << avg_fair << endl;
+    // f1 << "End while, the final population as below:" << endl;
+    // double avg_dist = 0;
+    // double avg_fair = 0;
+    // f1 << "solution index, dist, fairness " << endl;
+    // for(int i = 0; i < this->population_dict.size(); i++){
+    //     pair<int, double> fitness_result = this->multiobjective_fitness_function(this->population_dict[i], capacity, strategy);
+    //     f1 << i << ", " << fitness_result.first << ", " << fitness_result.second << endl;
+    //     avg_dist += (double)fitness_result.first;
+    //     avg_fair += fitness_result.second;
+    // }
+    // avg_dist/=this->population_dict.size();
+    // avg_fair/=this->population_dict.size();
+    // f1 << "Finally , the average distance and fairness of the population :  " << avg_dist << ", " << avg_fair << endl;
                     
     LocalSearch::show_solution(best_solution, f1);
     local_search.valid_solution(best_solution, 8*3600, f1);

@@ -8,6 +8,12 @@
 
 LocalSearch::LocalSearch(DataLoader & dataLoader): m_dataLoader(dataLoader) {
     srand(time(nullptr));
+    this->generator.seed(time(nullptr));
+}
+
+double LocalSearch::generate_random_number() {
+    uniform_real_distribution<double> distribution(0.0, 1.0);
+    return distribution(this->generator);
 }
 
 int LocalSearch::get_random_number(unsigned int begin, unsigned int end) {
@@ -408,7 +414,7 @@ int LocalSearch::find_index(const vector<int> &goal_vector, int element) {
     return index;
 }
 
-void LocalSearch::region_constrained_single_point_swap(unordered_map<int, vector<int> > &solution, int iteration, int car_capacity, const string &strategy) {
+void LocalSearch::region_constrained_single_point_swap(unordered_map<int, vector<int> > &solution, int iteration, int car_capacity, const string &strategy, double weight) {
     vector<int> key_vector = this->get_key_vector(solution);
     int r_index = this->get_random_number(0, solution.size()-1);
     int r_key = key_vector[r_index];
@@ -473,7 +479,7 @@ void LocalSearch::swap_segment(vector<int> &original_r, vector<int> &another_r, 
     }
 }
 
-void LocalSearch::region_constrained_segment_swap(unordered_map<int, vector<int> > &solution, int iteration, int capacity, float time_threshold, float speed, const string & strategy) {
+void LocalSearch::region_constrained_segment_swap(unordered_map<int, vector<int> > &solution, int iteration, int capacity, float time_threshold, float speed, const string & strategy, double weight) {
     vector<int> key_vector = this->get_key_vector(solution);
     int r_key = key_vector[this->get_random_number(0, key_vector.size()-1)];
     auto route_it = solution.find(r_key);
@@ -520,12 +526,12 @@ void LocalSearch::region_constrained_segment_swap(unordered_map<int, vector<int>
     }
 }
 
-void LocalSearch::mutation_with_novel_operator(unordered_map<int, vector<int> > &solution, int outer_iteration, int inner_iteration, int capacity, int operator_name, const string & strategy) {
+void LocalSearch::mutation_with_novel_operator(unordered_map<int, vector<int> > &solution, int outer_iteration, int inner_iteration, int capacity, int operator_name, const string & strategy, double weight) {
     for(int i=0; i<outer_iteration; i++){
         if(operator_name==1){
-            this->region_constrained_single_point_swap(solution, inner_iteration, capacity, strategy);
+            this->region_constrained_single_point_swap(solution, inner_iteration, capacity, strategy, weight);
         }else{
-            this->region_constrained_segment_swap(solution, inner_iteration, capacity, 8*3600, 12.5, strategy);
+            this->region_constrained_segment_swap(solution, inner_iteration, capacity, 8*3600, 12.5, strategy, weight);
 
         }
     }
@@ -658,14 +664,15 @@ void LocalSearch::optimize_solution(unordered_map<int, vector<int> > &solution, 
     unordered_map<int, vector<int> > best_solution = solution;
     int best_dist = INT32_MAX;
     int time_index = 1;
+    double weight =0.0;
     while(time_index<=runtime){
         int judge_break = 0;
         int best_distance = INT32_MAX;
 
         while(true){
-            this->mutation_with_novel_operator(solution, 100, 10, 72000, 1, strategy);
+            this->mutation_with_novel_operator(solution, 100, 10, 72000, 1, strategy, weight);
 
-            this->mutation_with_novel_operator(solution, 100, 100, 72000, 2, strategy);
+            this->mutation_with_novel_operator(solution, 100, 100, 72000, 2, strategy, weight);
 
             vector<int> random_method = {1, 2, 3};
             shuffle(random_method.begin(), random_method.end(), std::default_random_engine(time(nullptr)));
@@ -685,6 +692,7 @@ void LocalSearch::optimize_solution(unordered_map<int, vector<int> > &solution, 
                 if(current_dist < best_dist){
                     best_dist = current_dist;
                     best_solution = solution;
+
                 }
                 
             }else{
@@ -792,47 +800,65 @@ void LocalSearch::check_solution(const unordered_map<int, vector<int> > &solutio
     }
 }
 
-void LocalSearch::optimizee_solution_ma(unordered_map<int, vector<int> > &solution, int iteration, const string &strategy) {
-    int dist_threshold = 2000;
+void LocalSearch::optimizee_solution_ma(unordered_map<int, vector<int> > &solution, int iteration, const string &strategy, double weight) {
+    int dist_threshold = 5000;
     unordered_map<int, vector<int> > best_solution = solution;
     int best_dist = INT32_MAX;
+    double fairness_b = 5.0;
     int time_index = 1;
     while(time_index<=iteration){
         int judge_break = 0;
         int best_distance = INT32_MAX;
+        
         while(true){
             // clock_t st = clock();
-            // cout << st << endl;
-            this->mutation_with_novel_operator(solution, 40, 10, 72000, 1, strategy);
+            this->mutation_with_novel_operator(solution, 10, 5, 72000, 1, strategy, weight);
             // clock_t ct = clock();
             // cout << "time_cost = " << ct-st<< endl;
-            this->mutation_with_novel_operator(solution, 40, 20, 72000, 2, strategy);
+            this->mutation_with_novel_operator(solution, 10, 10, 72000, 2, strategy, weight);
             // cout << "tc = " << clock()-ct << endl;
             vector<int> random_method = {1, 2, 3};
             shuffle(random_method.begin(), random_method.end(), std::mt19937(std::random_device()()));
             for(auto & it: random_method){
-                this->mutation_with_classic_operator(solution, 40, 72000, strategy, it);
+                this->mutation_with_classic_operator(solution, 10, 72000, strategy, it);
             }
-            unordered_map<int, vector<int> > complete_solution = this->insert_for_all_route(solution, 72000, strategy);
-            int current_dist = this->get_total_distance(complete_solution);
-            
-            if(current_dist < best_distance){
-                if(current_dist<=best_distance-dist_threshold){
-                    // cout << current_dist << " cur vs best dist " << best_distance << endl;
-                    judge_break = 0;
+            // unordered_map<int, vector<int> > complete_solution = this->insert_for_all_route(solution, 72000, strategy);
+            // int current_dist = this->get_total_distance(complete_solution);
+            pair<int, double> result_pair = this->multiobjective_fitness_function(solution, 72000, strategy);
+            double r = this->generate_random_number();
+            int current_dist = result_pair.first;
+            double fairness = result_pair.second;
+            if((current_dist < (best_distance - dist_threshold) && fairness <= fairness_b) || (current_dist <= best_distance && fairness < (fairness_b-0.01))){
+                judge_break = 0;
+                best_distance = current_dist;
+                fairness_b = fairness;
+            }else if(r < weight){
+                if(current_dist < best_distance){
+                    if(current_dist<=best_distance-dist_threshold){
+                        judge_break = 0;
+                    }else{
+                        judge_break += 1;
+                    }
+                    best_distance = current_dist;
+
+                    if(current_dist < best_dist){
+                        best_dist = current_dist;
+                        best_solution = solution;
+                        fairness_b = fairness;
+                    }
                 }else{
                     judge_break += 1;
                 }
-                best_distance = current_dist;
-
-                if(current_dist < best_dist){
+            }else{
+                if(fairness < (fairness_b - 0.01)){
+                    best_distance = current_dist;
                     best_dist = current_dist;
                     best_solution = solution;
+                    fairness_b = fairness;
                 }
-            }else{
                 judge_break += 1;
             }
-            if(judge_break>=5){
+            if(judge_break>=3){
                 break;
             }
         }
@@ -841,7 +867,7 @@ void LocalSearch::optimizee_solution_ma(unordered_map<int, vector<int> > &soluti
             solution = best_solution;
         }
         if(solution.size()>=2){
-            this->mutation_with_relaxed_multi_point_swap(solution, 100, 72000, 45000, 0.20, 12.5, 8*3600, strategy);
+            this->mutation_with_relaxed_multi_point_swap(solution, 10, 72000, 45000, 0.20, 12.5, 8*3600, strategy);
         }
     }
     solution = best_solution;

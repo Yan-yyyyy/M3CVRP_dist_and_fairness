@@ -13,6 +13,8 @@
 
 
 class LocalSearch {
+private:
+    default_random_engine generator;
 public:
     DataLoader m_dataLoader;
     int window_len = 5;
@@ -26,6 +28,7 @@ public:
     pair<int, double> multiobjective_fitness_function(const unordered_map<int, vector<int> > &solution, int capacity, const string &strategy);
     vector<double> minMaxNormalization(const vector<double>& data);
     double calculateStandardDeviation(const vector<double>& data);
+    double generate_random_number();
     int get_closest_disposal_facility(int start, int end);
     pair<int, int> get_closest_park(int start, int end);
     vector<int> insert_disposal_facility_with_greedy(const vector<int> & route, int car_capacity);
@@ -42,18 +45,18 @@ public:
     void mutation_with_classic_operator(unordered_map<int, vector<int> > & solution, int iteration, int car_capacity, const string & strategy, int operator_name);
     static unordered_map<int, int> get_site_route_dict(const unordered_map<int, vector<int> > & solution);
     static vector<int> get_key_vector(const unordered_map<int, vector<int> > & solution);
-    void region_constrained_single_point_swap(unordered_map<int, vector<int> > & solution, int iteration, int car_capacity, const string & strategy);
+    void region_constrained_single_point_swap(unordered_map<int, vector<int> > & solution, int iteration, int car_capacity, const string & strategy, double weight);
     static int find_index(const vector<int> &goal_vector, int element);
     static void swap_segment(vector<int> & original_r, vector<int> &another_r, int original_index, int another_index);
-    void region_constrained_segment_swap(unordered_map<int, vector<int> > & solution, int iteration, int capacity, float time_threshold, float speed, const string & strategy);
-    void mutation_with_novel_operator(unordered_map<int, vector<int> > & solution, int outer_iteration, int inner_iteration, int capacity, int operator_name, const string & strategy);
+    void region_constrained_segment_swap(unordered_map<int, vector<int> > & solution, int iteration, int capacity, float time_threshold, float speed, const string & strategy, double weight);
+    void mutation_with_novel_operator(unordered_map<int, vector<int> > & solution, int outer_iteration, int inner_iteration, int capacity, int operator_name, const string & strategy, double weight);
     void relaxed_multi_point_swap(unordered_map<int, vector<int> > & solution, int dist_threshold, int capacity, float percentage, float speed, float time_threshold, const string & strategy);
     void mutation_with_relaxed_multi_point_swap(unordered_map<int, vector<int> > & solution, int iteration, int capacity, int dist_threshold, float percentage, float speed, float time_threshold, const string & strategy);
     void optimize_solution(unordered_map<int, vector<int> > & solution, int runtime, const string & strategy);
     static void show_solution(unordered_map<int, vector<int> > & solution);
     static void show_solution(unordered_map<int, vector<int> > & solution, fstream & fstream1);
     void check_solution(const unordered_map<int, vector<int> > & solution);
-    void optimizee_solution_ma(unordered_map<int, vector<int> > & solution, int iteration, const string & strategy);
+    void optimizee_solution_ma(unordered_map<int, vector<int> > & solution, int iteration, const string & strategy, double weight);
     void valid_solution(const unordered_map<int, vector<int> > & solution, float time_constraints, fstream & f1);
     int valid_solution(const unordered_map<int, vector<int> > & solution, float time_constraints);
 };
