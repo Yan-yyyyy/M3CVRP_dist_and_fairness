@@ -806,6 +806,7 @@ void LocalSearch::optimizee_solution_ma(unordered_map<int, vector<int> > &soluti
     int best_dist = INT32_MAX;
     double fairness_b = 5.0;
     int time_index = 1;
+    
     while(time_index<=iteration){
         int judge_break = 0;
         int best_distance = INT32_MAX;
@@ -825,6 +826,7 @@ void LocalSearch::optimizee_solution_ma(unordered_map<int, vector<int> > &soluti
 
             unordered_map<int, vector<int> > complete_solution = this->insert_for_all_route(solution, 72000, strategy);
             int current_dist = this->get_total_distance(complete_solution);
+
             if(current_dist < best_distance){
                 if(current_dist<=best_distance-dist_threshold){
                     judge_break = 0;
@@ -832,18 +834,13 @@ void LocalSearch::optimizee_solution_ma(unordered_map<int, vector<int> > &soluti
                     judge_break += 1;
                 }
                 best_distance = current_dist;
+
                 if(current_dist < best_dist){
                     best_dist = current_dist;
                     best_solution = solution;
                 }
             }else{
                 judge_break += 1;
-            }
-            finish_time = clock();
-            if(((finish_time-start_time)/CLOCKS_PER_SEC) >= time_index * 3000){
-                best_distance_vector.emplace_back(best_dist);
-                f1 << "after " << time_index << " * 50 minutes, best_dist = " << best_dist << endl;
-                time_index += 1;
             }
             if(judge_break>=5){
                 break;
@@ -887,22 +884,12 @@ void LocalSearch::optimizee_solution_ma(unordered_map<int, vector<int> > &soluti
             //     break;
             // }
         }
-        
+        time_index += 1;
         if(best_dist < best_distance){
             solution = best_solution;
         }
         if(solution.size()>=2){
             this->mutation_with_relaxed_multi_point_swap(solution, 10, 72000, 45000, 0.20, 12.5, 8*3600, strategy);
-            unordered_map<int, vector<int> > complete_solution = this->insert_for_all_route(solution, 72000, strategy);
-            int current_dist = this->get_total_distance(complete_solution);
-            if(current_dist < best_dist){
-                best_solution = solution;
-            }
-
-            finish_time = clock();
-            if(((finish_time-start_time)/CLOCKS_PER_SEC) >= time_index * 104256){
-                time_index += 1;
-            }
         }
     }
     solution = best_solution;

@@ -580,8 +580,8 @@ double MemeticAlgorithm::calculateStandardDeviation(const vector<double>& data) 
 }
 
 void MemeticAlgorithm::memetic_algorithm(int capacity, float time_threshold, int runtime, const string &strategy) {
-    string file_name = R"(./)" + to_string(time(nullptr)) +".txt";
-
+    string file_name = R"(./)" + to_string(time(nullptr)) +"oNSGA.txt";
+    string file_name2 = R"(./)" + to_string(time(nullptr)) +"oNSGA_sample.txt";
     vector<int> best_distance_vector;
     ofstream f;
     f.open(file_name);
@@ -589,6 +589,8 @@ void MemeticAlgorithm::memetic_algorithm(int capacity, float time_threshold, int
 
     fstream f1;
     f1.open(file_name, ios::out);
+    fstream f2;
+    f2.open(file_name2, ios::out);
     // double entropy = this->calculate_diversity(this->population_dict);
     // f1 << "size = 30 entropy maximum" << endl;
     // f1 << "entropy = " << entropy << endl;
@@ -634,7 +636,25 @@ void MemeticAlgorithm::memetic_algorithm(int capacity, float time_threshold, int
                 population_map.emplace(pair<int, unordered_map<int, vector<int> > >(population_map.size(), individual));
 
                 finish_time = clock();
-                time_index = ((finish_time-start_time)/CLOCKS_PER_SEC)/time_interval;
+                if(((finish_time-start_time)/CLOCKS_PER_SEC) >= time_index*time_interval){
+                    double avg_dist = 0;
+                    double avg_fair_t1 = 0;
+                    double avg_fair_c = 0;
+                    for(int i = 0; i < this->population_dict.size(); i++){
+                        pair<int, pair<double,double>> fitness_result = this->multiobjective_fitness_function_depart(this->population_dict[i], capacity, strategy);
+                        f2 << i << ", " << fitness_result.first << ", " << fitness_result.second.first << ", " << fitness_result.second.second << endl;
+                        // LocalSearch::show_solution(this->population_dict[i], f1);
+                        avg_dist += (double)fitness_result.first;
+                        avg_fair_t1 += fitness_result.second.first;
+                        avg_fair_c += fitness_result.second.second;
+                    }
+                    avg_dist/=this->population_dict.size();
+                    avg_fair_t1/=this->population_dict.size();
+                    avg_fair_c/=this->population_dict.size();
+                    
+                    f2 << "after " << time_index << " * "<< time_interval/60 <<" minutes, the average distance and fairness of the population :  " << avg_dist << avg_fair_t1 << ", " << avg_fair_c << endl;
+                    time_index += 1;
+                }
                 // if(((finish_time-start_time)/CLOCKS_PER_SEC) >= time_index*time_interval){
                     // cout << (finish_time-start_time)/CLOCKS_PER_SEC << "seconds" <<endl;
                     // f1 << "after " << time_index << " * "<< time_interval/60 <<" minutes, best_distance = " << best_distance << endl;
@@ -675,25 +695,26 @@ void MemeticAlgorithm::memetic_algorithm(int capacity, float time_threshold, int
                 population_map.emplace(pair<int, unordered_map<int, vector<int> > >(population_map.size(), individual));
 
                 finish_time = clock();
-                time_index = ((finish_time-start_time)/CLOCKS_PER_SEC)/time_interval;
-                // if(((finish_time-start_time)/CLOCKS_PER_SEC) >= time_index*time_interval){
-                    // f1 << "after " << time_index << " * "<<time_interval/60 <<" minutes, best_distance = " << best_distance << endl;
-                    // time_index += 1;
-                    // best_distance_vector.emplace_back(best_distance);
-                    // double avg_dist = 0;
-                    // double avg_fair = 0;
-                    // for(int i = 0; i < this->population_dict.size(); i++){
-                    //     pair<int, pair<double,double>> fitness_result = this->multiobjective_fitness_function(this->population_dict[i], capacity, strategy);
-                    //     f1 << i << ", " << fitness_result.first << ", " << fitness_result.second.first << ", " << fitness_result.second.second << endl;
-                    //     avg_dist += (double)fitness_result.first;
-                    //     avg_fair += fitness_result.second;
-                    // }
-                    // avg_dist/=this->population_dict.size();
-                    // avg_fair/=this->population_dict.size();
+                // time_index = ((finish_time-start_time)/CLOCKS_PER_SEC)/time_interval;
+                if(((finish_time-start_time)/CLOCKS_PER_SEC) >= time_index*time_interval){
+                    double avg_dist = 0;
+                    double avg_fair_t1 = 0;
+                    double avg_fair_c = 0;
+                    for(int i = 0; i < this->population_dict.size(); i++){
+                        pair<int, pair<double,double>> fitness_result = this->multiobjective_fitness_function_depart(this->population_dict[i], capacity, strategy);
+                        f2 << i << ", " << fitness_result.first << ", " << fitness_result.second.first << ", " << fitness_result.second.second << endl;
+                        // LocalSearch::show_solution(this->population_dict[i], f1);
+                        avg_dist += (double)fitness_result.first;
+                        avg_fair_t1 += fitness_result.second.first;
+                        avg_fair_c += fitness_result.second.second;
+                    }
+                    avg_dist/=this->population_dict.size();
+                    avg_fair_t1/=this->population_dict.size();
+                    avg_fair_c/=this->population_dict.size();
                     
-                    // f1 << "after " << time_index << " * "<< time_interval/60 <<" minutes, the average distance and fairness of the population :  " << avg_dist << ", " << avg_fair << endl;
-                //     time_index += 1;
-                // }
+                    f2 << "after " << time_index << " * "<< time_interval/60 <<" minutes, the average distance and fairness of the population :  " << avg_dist << ", " << avg_fair_t1 << ", " << avg_fair_c << endl;
+                    time_index += 1;
+                }
                 if(time_index > runtime){
                     break;
                 }
@@ -737,6 +758,7 @@ void MemeticAlgorithm::memetic_algorithm(int capacity, float time_threshold, int
     local_search.valid_solution(best_solution, 8*3600, f1);
     MemeticAlgorithm::show_vector(best_distance_vector, f1);
     f1.close();
+    f2.close();
 }
 
 void MemeticAlgorithm::show_vector(const vector<int> &goal_vector) {
