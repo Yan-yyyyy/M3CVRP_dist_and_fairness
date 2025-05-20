@@ -824,6 +824,7 @@ void LocalSearch::optimizee_solution_ma(unordered_map<int, vector<int> > &soluti
                 this->mutation_with_classic_operator(solution, 10, 72000, strategy, it);
             }
 
+            // oNSGA
             unordered_map<int, vector<int> > complete_solution = this->insert_for_all_route(solution, 72000, strategy);
             int current_dist = this->get_total_distance(complete_solution);
 
@@ -846,6 +847,8 @@ void LocalSearch::optimizee_solution_ma(unordered_map<int, vector<int> > &soluti
                 break;
             }
 
+
+            // with dynamic weight
             // pair<int, double> result_pair = this->multiobjective_fitness_function(solution, 72000, strategy);
             // double r = this->generate_random_number();
             // int current_dist = result_pair.first;

@@ -580,6 +580,8 @@ double MemeticAlgorithm::calculateStandardDeviation(const vector<double>& data) 
 }
 
 void MemeticAlgorithm::memetic_algorithm(int capacity, float time_threshold, int runtime, const string &strategy) {
+    // string file_name = R"(./)" + to_string(time(nullptr)) +"imp.txt";
+    // string file_name2 = R"(./)" + to_string(time(nullptr)) +"imp_sample.txt";
     string file_name = R"(./)" + to_string(time(nullptr)) +"oNSGA.txt";
     string file_name2 = R"(./)" + to_string(time(nullptr)) +"oNSGA_sample.txt";
     vector<int> best_distance_vector;

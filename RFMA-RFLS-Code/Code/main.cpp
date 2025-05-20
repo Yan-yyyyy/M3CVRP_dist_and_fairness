@@ -76,7 +76,7 @@ int main() {
     cout << population.size() << endl;
 
     LocalSearch localSearch = LocalSearch(dataLoader);
-    MemeticAlgorithm memeticAlgorithm = MemeticAlgorithm(localSearch, population.size()*2, (int)population.size()*4, 0.2, population);
+    MemeticAlgorithm memeticAlgorithm = MemeticAlgorithm(localSearch, population.size(), (int)population.size()*2, 0.2, population);
     memeticAlgorithm.calculate_diversity(population);
 
     memeticAlgorithm.delete_double_d_for_population();
