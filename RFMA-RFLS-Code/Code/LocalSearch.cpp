@@ -824,68 +824,44 @@ void LocalSearch::optimizee_solution_ma(unordered_map<int, vector<int> > &soluti
                 this->mutation_with_classic_operator(solution, 10, 72000, strategy, it);
             }
 
-            // oNSGA
-            unordered_map<int, vector<int> > complete_solution = this->insert_for_all_route(solution, 72000, strategy);
-            int current_dist = this->get_total_distance(complete_solution);
+            with dynamic weight
+            pair<int, double> result_pair = this->multiobjective_fitness_function(solution, 72000, strategy);
+            double r = this->generate_random_number();
+            int current_dist = result_pair.first;
+            double fairness = result_pair.second;
+            if((current_dist < (best_distance - dist_threshold) && fairness <= fairness_b) || (current_dist <= best_distance && fairness < (fairness_b-0.01))){
+                judge_break = 0;
+                best_distance = current_dist;
+                fairness_b = fairness;
+            }else if(r < weight){
+                if(current_dist < best_distance){
+                    if(current_dist<=best_distance-dist_threshold){
+                        judge_break = 0;
+                    }else{
+                        judge_break += 1;
+                    }
+                    best_distance = current_dist;
 
-            if(current_dist < best_distance){
-                if(current_dist<=best_distance-dist_threshold){
-                    judge_break = 0;
+                    if(current_dist < best_dist){
+                        best_dist = current_dist;
+                        best_solution = solution;
+                        fairness_b = fairness;
+                    }
                 }else{
                     judge_break += 1;
                 }
-                best_distance = current_dist;
-
-                if(current_dist < best_dist){
+            }else{
+                if(fairness < (fairness_b - 0.01)){
+                    best_distance = current_dist;
                     best_dist = current_dist;
                     best_solution = solution;
+                    fairness_b = fairness;
                 }
-            }else{
                 judge_break += 1;
             }
-            if(judge_break>=5){
+            if(judge_break>=3){
                 break;
             }
-
-
-            // with dynamic weight
-            // pair<int, double> result_pair = this->multiobjective_fitness_function(solution, 72000, strategy);
-            // double r = this->generate_random_number();
-            // int current_dist = result_pair.first;
-            // double fairness = result_pair.second;
-            // if((current_dist < (best_distance - dist_threshold) && fairness <= fairness_b) || (current_dist <= best_distance && fairness < (fairness_b-0.01))){
-            //     judge_break = 0;
-            //     best_distance = current_dist;
-            //     fairness_b = fairness;
-            // }else if(r < weight){
-            //     if(current_dist < best_distance){
-            //         if(current_dist<=best_distance-dist_threshold){
-            //             judge_break = 0;
-            //         }else{
-            //             judge_break += 1;
-            //         }
-            //         best_distance = current_dist;
-
-            //         if(current_dist < best_dist){
-            //             best_dist = current_dist;
-            //             best_solution = solution;
-            //             fairness_b = fairness;
-            //         }
-            //     }else{
-            //         judge_break += 1;
-            //     }
-            // }else{
-            //     if(fairness < (fairness_b - 0.01)){
-            //         best_distance = current_dist;
-            //         best_dist = current_dist;
-            //         best_solution = solution;
-            //         fairness_b = fairness;
-            //     }
-            //     judge_break += 1;
-            // }
-            // if(judge_break>=3){
-            //     break;
-            // }
         }
         time_index += 1;
         if(best_dist < best_distance){
